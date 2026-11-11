@@ -1,0 +1,32 @@
+# Python environments
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# macOS
+.DS_Store
+__MACOSX/
+
+# Generated benchmark files
+data/benchmark/
+
+# Generated database and outputs
+data/curated/*.duckdb
+data/curated/*.parquet
+data/curated/*.csv
+data/quarantine/*.parquet
+data/quarantine/*.csv
+
+# Logs
+logs/*.log
+
+# Secrets
+.env
+.env.*
+
+# IDE
+.vscode/

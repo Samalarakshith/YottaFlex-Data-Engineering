@@ -1,0 +1,32 @@
+pipeline:
+  name: "ecommerce_batch_ingestion"
+  version: "1.0.0"
+
+paths:
+  customers_source: "data/sample/customers.csv"
+  orders_source: "data/sample/orders.csv"
+  database_file: "data/curated/warehouse.duckdb"
+  curated_dir: "data/curated"
+  quarantine_dir: "data/quarantine"
+  logs_dir: "logs"
+
+processing:
+  batch_size: 50000
+  deduplication_policy: "latest_wins" # 'latest_wins' | 'reject_all' | 'keep_first'
+  enable_parquet_export: true
+  enable_csv_export: true
+  publish_analytics_marts: true
+
+validation:
+  strict_schema: true
+  allow_orphan_orders: false
+  allowed_order_statuses:
+    - "PENDING"
+    - "PROCESSING"
+    - "SHIPPED"
+    - "DELIVERED"
+    - "CANCELLED"
+    - "RETURNED"
+  min_order_amount: 0.01
+  max_order_amount: 1000000.00
+  min_item_count: 1

@@ -1,0 +1,32 @@
+{
+  "metadata": {
+    "seed": 42,
+    "error_rate": 0.06,
+    "generated_at": "2026-11-11T06:15:20.385235+00:00"
+  },
+  "customers": {
+    "total_rows": 100,
+    "expected_valid": 97,
+    "expected_quarantined": 2,
+    "expected_duplicates": 1,
+    "breakdown": {
+      "INVALID_EMAIL_FORMAT": 1,
+      "MALFORMED_CSV_ROW": 1
+    }
+  },
+  "orders": {
+    "total_rows": 500,
+    "expected_valid": 471,
+    "expected_quarantined": 26,
+    "expected_duplicates": 3,
+    "expected_revenue_sum": 176899.82,
+    "breakdown": {
+      "MALFORMED_CSV_ROW": 7,
+      "NULL_PRIMARY_KEY": 3,
+      "INVALID_ITEM_COUNT": 3,
+      "NEGATIVE_OR_ZERO_AMOUNT": 4,
+      "INVALID_ORDER_STATUS": 6,
+      "ORPHAN_FOREIGN_KEY": 3
+    }
+  }
+}

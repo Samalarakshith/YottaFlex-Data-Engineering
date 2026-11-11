@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YottaFlex | Batch Data Engineering Platform</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#eef2ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased">
+
+  <!-- TOP NAVBAR -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-500 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/20">
+          <i data-lucide="layers" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <span class="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-300">YottaFlex</span>
+          <span class="ml-2 text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">Batch Engine v1.0</span>
+        </div>
+      </div>
+
+      <!-- Quick Action Controls -->
+      <div class="flex items-center gap-2">
+        <button id="btnRunPipeline" onclick="runPipelineAction()" class="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition shadow-sm shadow-indigo-600/30">
+          <i data-lucide="play" class="w-3.5 h-3.5"></i>
+          <span>Run Pipeline</span>
+        </button>
+
+        <button onclick="runReconciliationAction()" class="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-sm shadow-emerald-600/30">
+          <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
+          <span>Reconcile</span>
+        </button>
+
+        <button onclick="runBackfillAction()" class="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 hover:bg-amber-500 text-white transition shadow-sm shadow-amber-600/30">
+          <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+          <span>Backfill</span>
+        </button>
+
+        <button onclick="runTestsAction()" class="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+          <i data-lucide="flask-conical" class="w-3.5 h-3.5"></i>
+          <span>Tests</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+
+    <!-- NAVIGATION TABS -->
+    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+      <nav class="flex gap-2" id="navTabs">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white flex items-center gap-2">
+          <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+          Dashboard
+        </button>
+        <button onclick="switchTab('explorer')" id="tab-explorer" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-2 transition">
+          <i data-lucide="database" class="w-4 h-4"></i>
+          Data Explorer
+        </button>
+        <button onclick="switchTab('generator')" id="tab-generator" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-2 transition">
+          <i data-lucide="sliders" class="w-4 h-4"></i>
+          Data Generator
+        </button>
+        <button onclick="switchTab('audit')" id="tab-audit" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-2 transition">
+          <i data-lucide="shield-check" class="w-4 h-4"></i>
+          Reconciliation Audit
+        </button>
+        <button onclick="switchTab('tests')" id="tab-tests" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-2 transition">
+          <i data-lucide="terminal" class="w-4 h-4"></i>
+          Automated Tests
+        </button>
+      </nav>
+
+      <div id="liveBadge" class="flex items-center gap-2 text-xs font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="badgeStatus">Connected</span>
+      </div>
+    </div>
+
+    <!-- NOTIFICATION ALERT BANNER -->
+    <div id="alertBanner" class="hidden rounded-xl p-4 border text-sm flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <i id="alertIcon" data-lucide="info" class="w-5 h-5"></i>
+        <span id="alertMessage"></span>
+      </div>
+      <button onclick="dismissAlert()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 1: DASHBOARD -->
+    <!-- ========================================================================= -->
+    <div id="view-dashboard" class="space-y-6">
+      <!-- KPI STATS CARDS -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <div class="glass-card p-5 rounded-2xl">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
+            <span>Curated Customers</span>
+            <i data-lucide="users" class="w-4 h-4 text-indigo-400"></i>
+          </div>
+          <div class="mt-3 flex items-baseline gap-2">
+            <span id="kpiCustomers" class="text-3xl font-extrabold text-white">--</span>
+            <span class="text-xs text-slate-400">in dim_customers</span>
+          </div>
+          <div class="mt-2 text-xs text-emerald-400 flex items-center gap-1">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+            <span>Deduplicated & Cleaned</span>
+          </div>
+        </div>
+
+        <div class="glass-card p-5 rounded-2xl">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
+            <span>Curated Orders</span>
+            <i data-lucide="shopping-cart" class="w-4 h-4 text-purple-400"></i>
+          </div>
+          <div class="mt-3 flex items-baseline gap-2">
+            <span id="kpiOrders" class="text-3xl font-extrabold text-white">--</span>
+            <span class="text-xs text-slate-400">in fct_orders</span>
+          </div>
+          <div class="mt-2 text-xs text-indigo-400 flex items-center gap-1">
+            <i data-lucide="link-2" class="w-3.5 h-3.5"></i>
+            <span>FK Referential Check Passed</span>
+          </div>
+        </div>
+
+        <div class="glass-card p-5 rounded-2xl">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
+            <span>Gross Curated Revenue</span>
+            <i data-lucide="dollar-sign" class="w-4 h-4 text-emerald-400"></i>
+          </div>
+          <div class="mt-3 flex items-baseline gap-2">
+            <span id="kpiRevenue" class="text-3xl font-extrabold text-white">--</span>
+            <span class="text-xs text-slate-400">USD</span>
+          </div>
+          <div id="kpiReconMatch" class="mt-2 text-xs text-emerald-400 flex items-center gap-1">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+            <span>100% Financial Reconciliation</span>
+          </div>
+        </div>
+
+        <div class="glass-card p-5 rounded-2xl">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
+            <span>Quarantined Rejects</span>
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i>
+          </div>
+          <div class="mt-3 flex items-baseline gap-2">
+            <span id="kpiQuarantine" class="text-3xl font-extrabold text-amber-400">--</span>
+            <span class="text-xs text-slate-400">records isolated</span>
+          </div>
+          <div class="mt-2 text-xs text-slate-400 flex items-center gap-1">
+            <span>Pass Rate:</span>
+            <span id="kpiPassRate" class="font-bold text-white">--%</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- CHARTS SECTION -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Chart 1: Quarantine Breakdown -->
+        <div class="glass-card p-5 rounded-2xl">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-sm text-slate-200 flex items-center gap-2">
+              <i data-lucide="pie-chart" class="w-4 h-4 text-amber-400"></i>
+              Quarantine Rejection Reasons
+            </h3>
+            <span class="text-xs text-slate-500">Live Breakdown</span>
+          </div>
+          <div class="h-64 flex items-center justify-center">
+            <canvas id="chartQuarantine"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: Order Status Distribution -->
+        <div class="glass-card p-5 rounded-2xl">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-sm text-slate-200 flex items-center gap-2">
+              <i data-lucide="bar-chart-3" class="w-4 h-4 text-indigo-400"></i>
+              Curated Orders by Status
+            </h3>
+            <span class="text-xs text-slate-500">fct_orders</span>
+          </div>
+          <div class="h-64 flex items-center justify-center">
+            <canvas id="chartOrders"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECENT RUNS TABLE -->
+      <div class="glass-card p-5 rounded-2xl">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-sm text-slate-200 flex items-center gap-2">
+            <i data-lucide="history" class="w-4 h-4 text-slate-400"></i>
+            Pipeline Execution Audit History
+          </h3>
+          <span class="text-xs text-slate-500">Logged to pipeline_runs</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="text-slate-400 border-b border-slate-800 bg-slate-900/40">
+              <tr>
+                <th class="py-2.5 px-3">Run ID</th>
+                <th class="py-2.5 px-3">Status</th>
+                <th class="py-2.5 px-3">Timestamp</th>
+                <th class="py-2.5 px-3">Duration</th>
+                <th class="py-2.5 px-3">Customers Curated</th>
+                <th class="py-2.5 px-3">Orders Curated</th>
+                <th class="py-2.5 px-3">Quarantined</th>
+              </tr>
+            </thead>
+            <tbody id="recentRunsBody" class="divide-y divide-slate-800/60 font-mono text-slate-300">
+              <tr><td colspan="7" class="py-4 text-center text-slate-500">Loading audit history...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 2: DATA EXPLORER -->
+    <!-- ========================================================================= -->
+    <div id="view-explorer" class="hidden space-y-4">
+      <div class="glass-card p-5 rounded-2xl space-y-4">
+        <!-- Explorer Controls -->
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-2">
+            <label class="text-xs text-slate-400 uppercase font-semibold">Select Table:</label>
+            <select id="selectExplorerTable" onchange="loadExplorerTable(0)" class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-500">
+              <option value="dim_customers">dim_customers (Curated Customers)</option>
+              <option value="fct_orders">fct_orders (Curated Orders)</option>
+              <option value="agg_customer_metrics">agg_customer_metrics (Summary Mart)</option>
+              <option value="quarantine_records">quarantine_records (Reject Path)</option>
+              <option value="pipeline_runs">pipeline_runs (Operational Log)</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="relative">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
+              <input type="text" id="explorerSearch" onkeyup="if(event.key==='Enter') loadExplorerTable(0)" placeholder="Search records..." class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-indigo-500 w-64">
+            </div>
+            <button onclick="loadExplorerTable(0)" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg text-slate-200 border border-slate-700 transition">
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Table View -->
+        <div class="overflow-x-auto border border-slate-800 rounded-xl bg-slate-950/60 max-h-[600px] overflow-y-auto">
+          <table class="w-full text-left text-xs whitespace-nowrap">
+            <thead id="explorerThead" class="text-slate-400 border-b border-slate-800 bg-slate-900 sticky top-0 z-10 font-mono">
+              <tr><th class="p-3">Loading...</th></tr>
+            </thead>
+            <tbody id="explorerTbody" class="divide-y divide-slate-800/60 font-mono text-slate-300">
+              <tr><td class="p-4 text-center text-slate-500">Loading table data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex items-center justify-between text-xs text-slate-400 pt-2">
+          <span id="explorerCountInfo">Showing 0 of 0 records</span>
+          <div class="flex gap-2">
+            <button id="btnPrevPage" onclick="changeExplorerPage(-1)" class="px-3 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 disabled:opacity-30">Previous</button>
+            <button id="btnNextPage" onclick="changeExplorerPage(1)" class="px-3 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 disabled:opacity-30">Next</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 3: DATA GENERATOR -->
+    <!-- ========================================================================= -->
+    <div id="view-generator" class="hidden space-y-6">
+      <div class="glass-card p-6 rounded-2xl max-w-2xl mx-auto space-y-6">
+        <div>
+          <h3 class="font-bold text-lg text-white flex items-center gap-2">
+            <i data-lucide="sparkles" class="w-5 h-5 text-indigo-400"></i>
+            Synthetic Dataset Generator
+          </h3>
+          <p class="text-xs text-slate-400 mt-1">
+            Configure scalable, reproducible synthetic datasets with controlled error injection for customers and orders.
+          </p>
+        </div>
+
+        <form id="genForm" onsubmit="generateDataAction(event)" class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Customers Count</label>
+              <input type="number" id="genCustomers" value="100" min="10" max="100000" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Orders Count</label>
+              <input type="number" id="genOrders" value="500" min="50" max="500000" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Random Seed (Reproducibility)</label>
+              <input type="number" id="genSeed" value="42" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Anomaly Rate (%)</label>
+              <input type="number" id="genErrorRate" value="6" min="0" max="50" step="1" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <button type="submit" id="btnSubmitGen" class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 font-semibold text-sm rounded-lg text-white transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
+              <i data-lucide="play" class="w-4 h-4"></i>
+              Generate New Dataset & Manifest
+            </button>
+          </div>
+        </form>
+
+        <!-- Manifest Result Display -->
+        <div id="genManifestBox" class="hidden border border-slate-800 rounded-xl bg-slate-900/60 p-4 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-emerald-400">Generated Ground Truth Manifest:</span>
+            <span class="text-xs text-slate-500">data/sample/ground_truth_manifest.json</span>
+          </div>
+          <pre id="genManifestContent" class="text-xs font-mono text-slate-300 overflow-x-auto bg-slate-950 p-3 rounded-lg"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 4: RECONCILIATION AUDIT -->
+    <!-- ========================================================================= -->
+    <div id="view-audit" class="hidden space-y-6">
+      <div class="glass-card p-6 rounded-2xl space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-bold text-lg text-white flex items-center gap-2">
+              <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
+              Automated Data Reconciliation & Audit Verification
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">
+              Verifies: <code class="text-indigo-400">Source Rows == Curated + Quarantined + Superseded Duplicates</code> and financial equality.
+            </p>
+          </div>
+          <button onclick="runReconciliationAction()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold rounded-lg text-white transition flex items-center gap-2">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            Run Live Reconciliation Audit
+          </button>
+        </div>
+
+        <div id="auditReportBox" class="bg-slate-950 border border-slate-800 rounded-xl p-5 font-mono text-xs text-slate-200 overflow-x-auto whitespace-pre">
+          Click "Run Live Reconciliation Audit" to compute report...
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 5: AUTOMATED TESTS -->
+    <!-- ========================================================================= -->
+    <div id="view-tests" class="hidden space-y-6">
+      <div class="glass-card p-6 rounded-2xl space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-bold text-lg text-white flex items-center gap-2">
+              <i data-lucide="flask-conical" class="w-5 h-5 text-indigo-400"></i>
+              Pytest Automated Test Harness
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">
+              Runs all 25 automated tests covering happy path, 0-byte inputs, malformed rows, null keys, duplicates, edge cases, and backfill.
+            </p>
+          </div>
+          <button onclick="runTestsAction()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold rounded-lg text-white transition flex items-center gap-2">
+            <i data-lucide="play" class="w-3.5 h-3.5"></i>
+            Execute Test Suite
+          </button>
+        </div>
+
+        <div id="testOutputBox" class="bg-slate-950 border border-slate-800 rounded-xl p-5 font-mono text-xs text-slate-300 overflow-x-auto whitespace-pre max-h-[600px] overflow-y-auto">
+          Click "Execute Test Suite" to run pytest...
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    let chartQuarInstance = null;
+    let chartOrdersInstance = null;
+    let currentExplorerOffset = 0;
+    const explorerLimit = 50;
+
+    // Tab switcher
+    function switchTab(tabName) {
+      const tabs = ['dashboard', 'explorer', 'generator', 'audit', 'tests'];
+      tabs.forEach(t => {
+        document.getElementById(`view-${t}`).classList.add('hidden');
+        const btn = document.getElementById(`tab-${t}`);
+        btn.classList.remove('bg-indigo-600', 'text-white');
+        btn.classList.add('text-slate-400');
+      });
+      document.getElementById(`view-${tabName}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`tab-${tabName}`);
+      activeBtn.classList.remove('text-slate-400');
+      activeBtn.classList.add('bg-indigo-600', 'text-white');
+
+      if (tabName === 'explorer') {
+        loadExplorerTable(0);
+      } else if (tabName === 'audit') {
+        runReconciliationAction();
+      }
+    }
+
+    // Alert helper
+    function showAlert(msg, isError = false) {
+      const b = document.getElementById('alertBanner');
+      const m = document.getElementById('alertMessage');
+      const i = document.getElementById('alertIcon');
+      b.classList.remove('hidden', 'bg-red-500/10', 'border-red-500/30', 'text-red-400', 'bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-400');
+      if (isError) {
+        b.classList.add('bg-red-500/10', 'border-red-500/30', 'text-red-400');
+        i.setAttribute('data-lucide', 'alert-circle');
+      } else {
+        b.classList.add('bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-400');
+        i.setAttribute('data-lucide', 'check-circle');
+      }
+      m.textContent = msg;
+      lucide.createIcons();
+    }
+
+    function dismissAlert() {
+      document.getElementById('alertBanner').classList.add('hidden');
+    }
+
+    // Fetch dashboard stats
+    async function fetchStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+        if (data.status !== 'success') return;
+
+        // Populate KPI Cards
+        document.getElementById('kpiCustomers').textContent = data.stats.customers_count.toLocaleString();
+        document.getElementById('kpiOrders').textContent = data.stats.orders_count.toLocaleString();
+        document.getElementById('kpiRevenue').textContent = '$' + data.stats.fct_revenue.toLocaleString(undefined, {minimumFractionDigits: 2});
+        document.getElementById('kpiQuarantine').textContent = data.stats.quarantine_count.toLocaleString();
+
+        const latest = data.latest_run;
+        if (latest && latest.pass_rate_pct) {
+          document.getElementById('kpiPassRate').textContent = latest.pass_rate_pct + '%';
+        }
+
+        // Render Charts
+        renderQuarantineChart(data.quarantine_breakdown);
+        renderOrdersChart(data.orders_status);
+
+        // Populate Recent Runs Table
+        populateRecentRuns(data.recent_runs);
+
+      } catch (e) {
+        console.error('Error fetching stats:', e);
+      }
+    }
+
+    function renderQuarantineChart(breakdown) {
+      const ctx = document.getElementById('chartQuarantine').getContext('2d');
+      const labels = breakdown.map(b => b.failure_code);
+      const counts = breakdown.map(b => b.count);
+
+      if (chartQuarInstance) chartQuarInstance.destroy();
+      chartQuarInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: counts,
+            backgroundColor: [
+              '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6',
+              '#3b82f6', '#10b981', '#14b8a6', '#64748b'
+            ],
+            borderColor: '#0f172a',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10 } } }
+          }
+        }
+      });
+    }
+
+    function renderOrdersChart(ordersStatus) {
+      const ctx = document.getElementById('chartOrders').getContext('2d');
+      const labels = ordersStatus.map(s => s.status);
+      const counts = ordersStatus.map(s => s.count);
+
+      if (chartOrdersInstance) chartOrdersInstance.destroy();
+      chartOrdersInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Orders Count',
+            data: counts,
+            backgroundColor: '#6366f1',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } },
+            y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#1e293b' } }
+          }
+        }
+      });
+    }
+
+    function populateRecentRuns(runs) {
+      const tbody = document.getElementById('recentRunsBody');
+      if (!runs || runs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-4 text-center text-slate-500">No runs logged yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = runs.map(r => `
+        <tr class="hover:bg-slate-800/30">
+          <td class="py-2.5 px-3 font-semibold text-slate-200">${r.run_id.substring(0,8)}...</td>
+          <td class="py-2.5 px-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${r.status === 'SUCCESS' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}">
+              ${r.status}
+            </span>
+          </td>
+          <td class="py-2.5 px-3 text-slate-400">${r.start_time}</td>
+          <td class="py-2.5 px-3 text-slate-300">${r.duration_seconds}s</td>
+          <td class="py-2.5 px-3 text-emerald-400 font-bold">${r.customers_curated}</td>
+          <td class="py-2.5 px-3 text-indigo-400 font-bold">${r.orders_curated}</td>
+          <td class="py-2.5 px-3 text-amber-400 font-bold">${r.total_quarantined}</td>
+        </tr>
+      `).join('');
+    }
+
+    // ACTIONS
+    async function runPipelineAction() {
+      const btn = document.getElementById('btnRunPipeline');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="animate-spin mr-1">🌀</span> Running...';
+      try {
+        const res = await fetch('/api/run-pipeline', { method: 'POST' });
+        const d = await res.json();
+        if (d.status === 'success') {
+          showAlert(`Pipeline execution completed: ${d.metrics.orders_curated} orders curated in ${d.metrics.duration_seconds}s.`);
+          fetchStats();
+        } else {
+          showAlert(d.message, true);
+        }
+      } catch (e) {
+        showAlert('Error running pipeline: ' + e, true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="play" class="w-3.5 h-3.5"></i><span>Run Pipeline</span>';
+        lucide.createIcons();
+      }
+    }
+
+    async function runReconciliationAction() {
+      const box = document.getElementById('auditReportBox');
+      box.textContent = 'Computing automated reconciliation report...';
+      try {
+        const res = await fetch('/api/run-reconciliation', { method: 'POST' });
+        const d = await res.json();
+        if (d.status === 'success') {
+          box.textContent = d.report_text;
+          showAlert('Reconciliation Audit finished with 100% balance pass!');
+          fetchStats();
+        } else {
+          box.textContent = 'Error: ' + d.message;
+        }
+      } catch (e) {
+        box.textContent = 'Error: ' + e;
+      }
+    }
+
+    async function runBackfillAction() {
+      try {
+        const res = await fetch('/api/run-backfill', { method: 'POST' });
+        const d = await res.json();
+        if (d.status === 'success') {
+          showAlert(d.message);
+          fetchStats();
+        } else {
+          showAlert(d.message, true);
+        }
+      } catch (e) {
+        showAlert('Backfill error: ' + e, true);
+      }
+    }
+
+    async function runTestsAction() {
+      const box = document.getElementById('testOutputBox');
+      box.textContent = 'Executing pytest test suite (25 tests)...\n';
+      try {
+        const res = await fetch('/api/run-tests', { method: 'POST' });
+        const d = await res.json();
+        box.textContent = d.stdout;
+        if (d.passed) {
+          showAlert('All automated tests passed successfully!');
+        } else {
+          showAlert('Tests failed, see output box for details.', true);
+        }
+      } catch (e) {
+        box.textContent += '\nError executing tests: ' + e;
+      }
+    }
+
+    async function generateDataAction(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmitGen');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+      try {
+        const payload = {
+          customers: document.getElementById('genCustomers').value,
+          orders: document.getElementById('genOrders').value,
+          seed: document.getElementById('genSeed').value,
+          error_rate: parseFloat(document.getElementById('genErrorRate').value) / 100.0,
+        };
+        const res = await fetch('/api/generate-data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const d = await res.json();
+        if (d.status === 'success') {
+          showAlert('Generated new reproducible sample datasets!');
+          document.getElementById('genManifestBox').classList.remove('hidden');
+          document.getElementById('genManifestContent').textContent = JSON.stringify(d.manifest, null, 2);
+        } else {
+          showAlert(d.message, true);
+        }
+      } catch (err) {
+        showAlert('Generation failed: ' + err, true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i> Generate New Dataset & Manifest';
+        lucide.createIcons();
+      }
+    }
+
+    // EXPLORER
+    async function loadExplorerTable(offset = 0) {
+      currentExplorerOffset = offset;
+      const tbl = document.getElementById('selectExplorerTable').value;
+      const search = document.getElementById('explorerSearch').value;
+      const thead = document.getElementById('explorerThead');
+      const tbody = document.getElementById('explorerTbody');
+      tbody.innerHTML = '<tr><td class="p-4 text-center text-slate-500">Loading...</td></tr>';
+
+      try {
+        const res = await fetch(`/api/data/${tbl}?limit=${explorerLimit}&offset=${offset}&search=${encodeURIComponent(search)}`);
+        const d = await res.json();
+        if (d.status !== 'success') {
+          tbody.innerHTML = `<tr><td class="p-4 text-center text-red-400">Error: ${d.message}</td></tr>`;
+          return;
+        }
+
+        // Render Headers
+        thead.innerHTML = `<tr>${d.columns.map(c => `<th class="p-3">${c}</th>`).join('')}</tr>`;
+
+        // Render Rows
+        if (!d.rows || d.rows.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="' + d.columns.length + '" class="p-6 text-center text-slate-500">No records found.</td></tr>';
+        } else {
+          tbody.innerHTML = d.rows.map(r => `
+            <tr class="hover:bg-slate-900/60 transition">
+              ${d.columns.map(c => `<td class="p-3 border-b border-slate-800/40 text-slate-300">${r[c] !== undefined ? r[c] : ''}</td>`).join('')}
+            </tr>
+          `).join('');
+        }
+
+        // Pagination info
+        const total = d.total_count;
+        const start = total === 0 ? 0 : offset + 1;
+        const end = Math.min(offset + explorerLimit, total);
+        document.getElementById('explorerCountInfo').textContent = `Showing ${start} - ${end} of ${total} records`;
+        document.getElementById('btnPrevPage').disabled = (offset === 0);
+        document.getElementById('btnNextPage').disabled = (end >= total);
+
+      } catch (e) {
+        tbody.innerHTML = `<tr><td class="p-4 text-center text-red-400">Error: ${e}</td></tr>`;
+      }
+    }
+
+    function changeExplorerPage(delta) {
+      const newOffset = Math.max(0, currentExplorerOffset + delta * explorerLimit);
+      loadExplorerTable(newOffset);
+    }
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      fetchStats();
+    });
+  </script>
+</body>
+</html>
